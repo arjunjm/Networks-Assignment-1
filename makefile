@@ -1,7 +1,7 @@
 client.o: server.o
-	gcc -Wall   -o  client  client.c
+	g++ -Wall   -o  client  client.cpp
 server.o: 
-	gcc -Wall   -o  server  server.c
+	g++ -Wall   -o  server  server.cpp
 clean:
 	rm -rf server
 	rm -rf client
