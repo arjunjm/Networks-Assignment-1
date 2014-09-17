@@ -2,8 +2,8 @@ ECEN602 HW1 Programming Assignment
 ----------------------------------
 
 Team Number: 12
-Member 1 # LastName, FirstName (UIN: xxxxxxxxx)
-Member 2 # LastName, FirstName (UIN: xxxxxxxxx)
+Member 1 # Moothedath, Arjun (UIN: xxxxxxxxx)
+Member 2 # Wilkins, Janessa (UIN: 724000155)
 ---------------------------------------
 
 Description/Comments:
