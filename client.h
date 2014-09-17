@@ -17,6 +17,7 @@
 
 #define MAXDATASIZE 100 // max number of bytes we can get at once 
 
+/*
 void *get_in_addr(struct sockaddr *sa)
 {
     if (sa->sa_family == AF_INET) {
@@ -25,16 +26,19 @@ void *get_in_addr(struct sockaddr *sa)
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
-
+*/
 class Client
 {
     int sockFd;
     char hostName[15];
     struct addrinfo hints;
+    bool isConnected;
     public:
         Client(char *hostName);
         int connectToHost();
+        int sendData(void * buf, size_t len, int flags = 0);
         int recvData();
+        bool getConnectionStatus();
 };
 
 #endif /* __CLIENT_H__ */

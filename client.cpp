@@ -1,10 +1,12 @@
 #include "client.h"
+#include "helper.h"
 #include <iostream>
 using namespace std;
 
 
 Client::Client(char *hName)
 {
+    isConnected = false;
     strcpy(this->hostName, hName); 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
@@ -54,6 +56,7 @@ int Client::connectToHost()
 
     inet_ntop(temp->ai_family, get_in_addr((struct sockaddr*)temp->ai_addr), s, sizeof s);
     printf("client: Connecting to %s\n", s);
+    isConnected = true;
 
     freeaddrinfo(serverInfo);
     return 0;
@@ -75,6 +78,18 @@ int Client::recvData()
     return numBytes;
 }
 
+int Client::sendData(void *msg, size_t len, int flags)
+{
+    int retVal;
+    retVal = send(sockFd, msg, len, flags);
+    return retVal;
+}
+
+bool Client::getConnectionStatus()
+{
+    return isConnected;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -90,6 +105,10 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Connection failed\n");
         exit(1);
     }
-    c->recvData();
+
+    if (c->getConnectionStatus())
+    {
+        c->recvData();
+    }
     return 0;
 }

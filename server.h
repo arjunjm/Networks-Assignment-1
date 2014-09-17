@@ -17,6 +17,7 @@
 #define PORT "3490"
 #define BACKLOG 10
 
+/*
 void sigchld_handler(int s)
 {
     while(waitpid(-1, NULL, WNOHANG) > 0);
@@ -31,7 +32,7 @@ void *get_in_addr(struct sockaddr *sa)
 
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
-
+*/
 class Server
 {
     struct addrinfo hints;

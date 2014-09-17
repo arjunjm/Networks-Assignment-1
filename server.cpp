@@ -1,4 +1,5 @@
 #include "server.h"
+#include "helper.h"
 
 Server::Server()
 {
@@ -69,6 +70,7 @@ int Server::listenForConnections()
         perror("Error while listening");
         exit(1);
     }
+    return 0;
 }
 
 int Server::acceptConnection()
@@ -111,4 +113,5 @@ int main()
 
     printf("server: waiting for connections..\n");
     s->acceptConnection();
+    return 0;
 }
