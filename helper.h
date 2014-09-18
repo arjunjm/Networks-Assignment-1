@@ -4,8 +4,41 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define MAXDATASIZE 100
+
 struct sockaddr;
 struct sockaddr_in;
+
+typedef enum AttributeType : unsigned short
+{
+   ATTR_REASON,
+   ATTR_USER,
+   ATTR_CLI_CNT,
+   ATTR_MSG
+} AttributeTypeT;
+
+typedef union
+{
+    char username[16];
+    char message[512];
+    char reason[32];
+    unsigned short clientCount;
+}Payload;
+
+typedef struct SBMPAttribute
+{
+    AttributeTypeT type;
+    unsigned short length;
+    Payload payload;
+} __attribute__((packed)) SBMPAttributeT;
+
+typedef struct SBMPHeader
+{
+    unsigned int version : 9;
+    unsigned int type : 7;
+    unsigned short length;
+    SBMPAttributeT attributes[2];
+} __attribute__((packed)) SBMPHeaderT;
 
 void sigchld_handler(int s)
 {

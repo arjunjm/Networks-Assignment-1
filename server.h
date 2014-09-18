@@ -17,33 +17,20 @@
 #define PORT "3490"
 #define BACKLOG 10
 
-/*
-void sigchld_handler(int s)
-{
-    while(waitpid(-1, NULL, WNOHANG) > 0);
-}
-
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-*/
 class Server
 {
-    struct addrinfo hints;
-    int sockFd;
-    int newConnFd;
+    private:
+        struct addrinfo hints;
+        int sockFd;
+        int newConnFd;
 
     public:
-    Server();
-    int createSocketAndBind();
-    int listenForConnections();
-    int acceptConnection();
+        Server();
+        int createSocketAndBind();
+        int listenForConnections();
+        int acceptConnection();
+        int sendData(int sockFd, void * buf, size_t len, int flags = 0);
+        int recvData(int sockFd);
 };
 
 #endif /* __SERVER__H__ */

@@ -3,7 +3,6 @@
 #include <iostream>
 using namespace std;
 
-
 Client::Client(char *hName)
 {
     isConnected = false;
@@ -108,6 +107,21 @@ int main(int argc, char *argv[])
 
     if (c->getConnectionStatus())
     {
+        //char msg[15] = "Hi Server";
+        SBMPHeaderT sbmpHeader;
+        SBMPAttributeT sbmpAttr;
+
+        sbmpAttr.type = ATTR_USER;
+        strcpy(sbmpAttr.payload.username, "arjun");
+        sbmpAttr.length = strlen(sbmpAttr.payload.username);
+
+        sbmpHeader.version = 1;
+        sbmpHeader.type = 2;
+        sbmpHeader.attributes[0] = sbmpAttr;
+        sbmpHeader.length = sbmpAttr.length;
+        
+        //c->sendData(msg, strlen(msg));
+        c->sendData(&sbmpHeader, sizeof(SBMPHeader));
         c->recvData();
     }
     return 0;
