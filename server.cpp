@@ -3,8 +3,8 @@
  */
 
 #include "server.h"
-#include "helper.h"
 #include <iostream>
+
 using namespace std;
 
 Server::Server()
@@ -85,24 +85,59 @@ int Server::sendData(int sockFD, void * buf, size_t len, int flags)
     retVal = send(sockFD, buf, len, flags);
     return retVal;
 }
-
-int Server::recvData(int sockFD)
+/*
+void printMap(std::map<int, string> myMap)
+{
+    std::map<int, string>::iterator it;
+    for (it = myMap.begin(); it != myMap.end(); it++)
+    {
+        cout << it->first << " : " << it->second << endl;   
+    }
+}
+*/
+int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
 {
     int numBytes;
-    //char buf[MAXDATASIZE];
     SBMPHeaderT *recvHeader = new SBMPHeaderT();
-    //numBytes = recv(sockFD, buf, MAXDATASIZE-1, 0);
-    numBytes = recv(sockFD, recvHeader, 2*sizeof(SBMPHeaderT), 0);
+    numBytes = recv(sockFD, recvHeader, sizeof(SBMPHeaderT)-1, 0);
     if (numBytes == -1)
     {
         perror("Error in receiving data from the client");
         exit(1);
     }
-    //buf[numBytes] = '\0';
-    //printf("Server: Received '%s' from the client \n", buf);
-    printf("Server: Received '%s' from the client \n", recvHeader->attributes[0].payload.username);
+
+    msgType = (SBMPMessageTypeT) recvHeader->type;
+
+    switch(msgType) 
+    {
+        case JOIN:
+            {
+                string userName(recvHeader->attributes[0].payload.username);
+                if (userStatusMap.find(userName) == userStatusMap.end())
+                {
+                    cout << "======================================" << endl;
+                    cout << userName << " has joined the chat session" << endl;
+                    cout << "======================================" << endl;
+                    userStatusMap[userName] = ONLINE;
+                    fdUserMap[sockFD] = userName;
+                }
+                else
+                {
+                    cout << "The user has already connected\n";
+                }
+            }
+            break;
+
+        case FWD:
+            break;
+
+        case SEND:
+            strcpy(message, recvHeader->attributes[0].payload.message);
+            cout << " Received message from " << fdUserMap[sockFD] << ": " << message << endl;
+            break;
+
+    }
     
-    printf("Server: returning back. Bytes read = %d \n", numBytes);
     return numBytes;
 }
 
@@ -111,40 +146,110 @@ int Server::acceptConnection()
     struct sockaddr_storage clientAddr;
     socklen_t sin_size;
     char ipAddr[INET6_ADDRSTRLEN]; 
+    fd_set master, read_fds;
+    int fdMax;
+    struct timeval tv;
+    tv.tv_sec = 50;
+    tv.tv_usec = 500000;
+    FD_ZERO(&master);
+    FD_ZERO(&read_fds);
+
+    FD_SET(sockFd, &master);
+    fdMax = sockFd;
     while(1)
     {
-       sin_size = sizeof clientAddr;
-       newConnFd = accept(sockFd, (struct sockaddr *)&clientAddr, &sin_size);
-
-       if (newConnFd == -1)
+       read_fds = master;
+       if (select(fdMax + 1, &read_fds, NULL, NULL, &tv) == -1)
        {
-           perror("Error while accepting connection..");
-           continue;
+           perror("Select");
+           exit(4);
        }
-
-       inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr *)&clientAddr), ipAddr, sizeof ipAddr);
-       printf("server: got connection from %s\n", ipAddr);
 
        /*
-       if (!fork()) { // this is the child process
-           close(sockFd); // child doesn't need the listener
-           recvData(newConnFd);
-           char data[15] = "Hello, Client!";
-           cout << "New connection FD = " << newConnFd << endl;
-           if (sendData(newConnFd, data, strlen(data), 0) == -1)
-               perror("Error while sending message");
-           close(newConnFd);
-           exit(0);
+        * Run through existing connections and check if a client is ready
+        */
+       for (int i = 0; i <= fdMax; i++)
+       {
+           if (FD_ISSET(i, &read_fds))
+           {
+               if (i == sockFd)
+               /*
+                * This is the listening socket. 
+                * Check new incoming connections.
+                */
+               {
+                   sin_size = sizeof clientAddr;
+                   newConnFd = accept(i, (struct sockaddr *)&clientAddr, &sin_size);
+                   if (newConnFd == -1)
+                   {
+                       perror("Error while accepting connection..");
+                   }
+                   else
+                   {
+                       FD_SET(newConnFd, &master);
+
+                       if (newConnFd > fdMax)
+                       {
+                           fdMax = newConnFd;
+                       }
+                       inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr *)&clientAddr), ipAddr, sizeof ipAddr);
+                       printf("server: got connection from %s\n", ipAddr);
+
+                   }
+
+               }
+               else
+               {
+                   /*
+                    * Handle data from client connection.
+                    */
+                   int readBytes;
+                   SBMPMessageType msgType;
+                   char *message = new char[512];
+                   if ((readBytes = recvData(i, msgType, message)) <= 0)
+                   {
+                        /*
+                         * This means either there was a error in receiving data
+                         * or that the client has closed the connection.
+                         */
+                        if (readBytes == 0)
+                        {
+                            // Close the connection
+                            printf("server: closing connection");
+                            FD_CLR(i, &master);
+                            close(i);
+                        }
+                        else
+                        {
+                            perror("receive");
+                        }
+                   }
+                   else
+                   {
+                       /*
+                        * Client is sending actual data.
+                        */
+                       for (int j = 0; j <= fdMax; j++)
+                       {
+                           if (FD_ISSET (j, &master))
+                           {
+                               if ((j != i) && (j != sockFd))
+                               {
+                                   if (msgType == SEND)
+                                   {
+                                       cout << " Sending message: " << message << endl;
+                                       if (sendData(j, message, strlen(message), 0) == -1)
+                                           perror("Error while broadcasting message");
+                                   }
+                               }
+                           }
+                       }
+                       delete [] message;
+                        
+                   }
+               }
+           }
        }
-       */
-
-       recvData(newConnFd);
-       char data[15] = "Hello, Client!";
-       if (sendData(newConnFd, data, strlen(data), 0) == -1)
-           perror("Error while sending message");
-
-       close(newConnFd);  // parent doesn't need this
-
     }
     return 0;
 }

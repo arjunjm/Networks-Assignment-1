@@ -13,9 +13,14 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <map>
+#include "helper.h"
+#include <string>
 
 #define PORT "3490"
 #define BACKLOG 10
+
+using namespace std;
 
 class Server
 {
@@ -23,6 +28,8 @@ class Server
         struct addrinfo hints;
         int sockFd;
         int newConnFd;
+        std::map<int, string> fdUserMap;
+        std::map<string, UserStatusT> userStatusMap;
 
     public:
         Server();
@@ -30,7 +37,7 @@ class Server
         int listenForConnections();
         int acceptConnection();
         int sendData(int sockFd, void * buf, size_t len, int flags = 0);
-        int recvData(int sockFd);
+        int recvData(int sockFd, SBMPMessageType&, char *);
 };
 
 #endif /* __SERVER__H__ */

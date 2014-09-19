@@ -3,11 +3,22 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <list>
+
+using namespace std;
 
 #define MAXDATASIZE 100
+#define STDIN 0
 
 struct sockaddr;
 struct sockaddr_in;
+
+typedef enum UserStatus
+{
+    ONLINE,
+    OFFLINE,
+    IDLE
+} UserStatusT;
 
 typedef enum AttributeType : unsigned short
 {
@@ -16,6 +27,13 @@ typedef enum AttributeType : unsigned short
    ATTR_CLI_CNT,
    ATTR_MSG
 } AttributeTypeT;
+
+typedef enum SBMPMessageType
+{
+    JOIN = 2,
+    FWD  = 3,
+    SEND = 4
+} SBMPMessageTypeT;
 
 typedef union
 {
