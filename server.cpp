@@ -229,6 +229,7 @@ int Server::acceptConnection()
                        /*
                         * Client is sending actual data.
                         */
+                       const char* userName = fdUserMap[i].c_str();
                        for (int j = 0; j <= fdMax; j++)
                        {
                            if (FD_ISSET (j, &master))
@@ -237,8 +238,8 @@ int Server::acceptConnection()
                                {
                                    if (msgType == SEND)
                                    {
-                                       cout << " Sending message: " << message << endl;
-                                       if (sendData(j, message, strlen(message), 0) == -1)
+                                       SBMPHeaderT *sbmpHeader = createMessagePacket(SEND, userName, message);
+                                       if (sendData(j, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
                                            perror("Error while broadcasting message");
                                    }
                                }

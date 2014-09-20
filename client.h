@@ -31,7 +31,7 @@ class Client
         int recvData();
         bool getConnectionStatus();
         int  getSocketFd();
-        SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, char *msg);
+        char* getUserName();
 };
 
 #endif /* __CLIENT_H__ */

@@ -89,6 +89,7 @@ bool Client::getConnectionStatus()
     return isConnected;
 }
 
+#if 0
 SBMPHeaderT* Client::createMessagePacket(SBMPMessageTypeT msgType, char *msg)
 {
     SBMPAttributeT sbmpAttr;
@@ -149,10 +150,16 @@ SBMPHeaderT* Client::createMessagePacket(SBMPMessageTypeT msgType, char *msg)
     }
     return sbmpHeader;
 }
+#endif
 
 int Client::getSocketFd()
 {
     return sockFd;
+}
+
+char * Client::getUserName()
+{
+    return userName;
 }
 
 int main(int argc, char *argv[])
@@ -176,7 +183,7 @@ int main(int argc, char *argv[])
         /*
          * Send JOIN message to the server
          */
-        SBMPHeaderT * sbmpHeader = c->createMessagePacket(JOIN, NULL);
+        SBMPHeaderT * sbmpHeader = createMessagePacket(JOIN, c->getUserName(), NULL);
         c->sendData(sbmpHeader, sizeof(SBMPHeader));
 
     }
@@ -184,15 +191,18 @@ int main(int argc, char *argv[])
     int clientFd = c->getSocketFd();
     fd_set read_fds;
     int fdMax;
-    FD_ZERO(&read_fds);
+    //FD_ZERO(&read_fds);
     fdMax = clientFd;
-    FD_SET(c->getSocketFd(), &read_fds);
-    FD_SET(STDIN_FILENO, &read_fds);
+    //FD_SET(c->getSocketFd(), &read_fds);
+    //FD_SET(STDIN_FILENO, &read_fds);
 
 
     char message[512];
     while(1)
     {
+        FD_ZERO(&read_fds);
+        FD_SET(c->getSocketFd(), &read_fds);
+        FD_SET(STDIN_FILENO, &read_fds);
         if (select (fdMax + 1, &read_fds, NULL, NULL, NULL) == -1)
         {
             perror("Select");
@@ -204,9 +214,8 @@ int main(int argc, char *argv[])
             /*
              * Read input from user
              */
-            //fgets(message, 512, STDIN_FILENO);
             cin.getline(message, 512);
-            SBMPHeaderT * sbmpHeader = c->createMessagePacket(SEND, message);
+            SBMPHeaderT * sbmpHeader = createMessagePacket(SEND, c->getUserName(), message);
             c->sendData(sbmpHeader, sizeof(SBMPHeader));
             fflush(STDIN_FILENO);
         }
@@ -217,7 +226,7 @@ int main(int argc, char *argv[])
              * Get broadcast message from server
              */
             c->recvData();
-            fflush(STDIN_FILENO);
+            //fflush(STDIN_FILENO);
         }
     }
 
