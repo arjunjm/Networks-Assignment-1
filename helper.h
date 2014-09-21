@@ -103,6 +103,31 @@ SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, const char *userName,
             break;
         
         case FWD:
+
+            /*
+             * Fill in the SBMP Attribute struct
+             */   
+
+            SBMPAttributeT sbmpUserAttr;
+            sbmpUserAttr.type = ATTR_USER;
+            strcpy(sbmpUserAttr.payload.username, userName);
+            sbmpUserAttr.length = strlen(sbmpUserAttr.payload.username) + 4;
+
+            sbmpAttr.type = ATTR_MSG;
+            strcpy(sbmpAttr.payload.message, msg);
+            sbmpAttr.length = strlen(sbmpAttr.payload.message) + 4;
+
+            /*
+             * Fill in the SBMP Header struct
+             */
+
+            sbmpHeader = new SBMPHeaderT();
+            sbmpHeader->version = 1;
+            sbmpHeader->type = (int)FWD;
+            sbmpHeader->length = sbmpAttr.length + 4;
+            sbmpHeader->attributes[0] = sbmpUserAttr;
+            sbmpHeader->attributes[1] = sbmpAttr;
+
             break;
 
         case SEND:

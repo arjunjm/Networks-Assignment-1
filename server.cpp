@@ -85,6 +85,7 @@ int Server::sendData(int sockFD, void * buf, size_t len, int flags)
     retVal = send(sockFD, buf, len, flags);
     return retVal;
 }
+
 /*
 void printMap(std::map<int, string> myMap)
 {
@@ -115,9 +116,7 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
                 string userName(recvHeader->attributes[0].payload.username);
                 if (userStatusMap.find(userName) == userStatusMap.end())
                 {
-                    cout << "======================================" << endl;
                     cout << userName << " has joined the chat session" << endl;
-                    cout << "======================================" << endl;
                     userStatusMap[userName] = ONLINE;
                     fdUserMap[sockFD] = userName;
                 }
@@ -132,8 +131,10 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
             break;
 
         case SEND:
-            strcpy(message, recvHeader->attributes[0].payload.message);
-            cout << " Received message from " << fdUserMap[sockFD] << ": " << message << endl;
+            {
+                strcpy(message, recvHeader->attributes[0].payload.message);
+                cout << "Received message from " << fdUserMap[sockFD] << ": [" << message << "]. Forwarding message to other clients" << endl;
+            }
             break;
 
     }
@@ -193,7 +194,6 @@ int Server::acceptConnection()
                            fdMax = newConnFd;
                        }
                        inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr *)&clientAddr), ipAddr, sizeof ipAddr);
-                       printf("server: got connection from %s\n", ipAddr);
 
                    }
 
@@ -215,8 +215,10 @@ int Server::acceptConnection()
                         if (readBytes == 0)
                         {
                             // Close the connection
-                            printf("server: closing connection");
+                            cout << fdUserMap[i] << " has left the chat session. Closing the connection " << endl;
                             FD_CLR(i, &master);
+                            userStatusMap.erase(fdUserMap[i]);
+                            fdUserMap.erase(i);
                             close(i);
                         }
                         else
@@ -238,7 +240,7 @@ int Server::acceptConnection()
                                {
                                    if (msgType == SEND)
                                    {
-                                       SBMPHeaderT *sbmpHeader = createMessagePacket(SEND, userName, message);
+                                       SBMPHeaderT *sbmpHeader = createMessagePacket(FWD, userName, message);
                                        if (sendData(j, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
                                            perror("Error while broadcasting message");
                                    }
@@ -261,7 +263,7 @@ int main()
     s->createSocketAndBind();
     s->listenForConnections();
 
-    printf("server: waiting for connections..\n");
+    printf("Chat server is waiting for incoming connections...\n");
     s->acceptConnection();
     return 0;
 }
