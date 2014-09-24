@@ -32,7 +32,11 @@ typedef enum SBMPMessageType
 {
     JOIN = 2,
     FWD  = 3,
-    SEND = 4
+    SEND = 4,
+    ACK = 5,
+    NACK = 6,
+    ONLINE_INFO = 7,
+    OFFLINE_INFO = 8
 } SBMPMessageTypeT;
 
 typedef union
@@ -73,7 +77,7 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, const char *userName, char *msg)
+SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, const char *userName, const char *msg)
 {
     SBMPAttributeT sbmpAttr;
     SBMPHeaderT *sbmpHeader;
@@ -150,6 +154,36 @@ SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, const char *userName,
             sbmpHeader->length = sbmpAttr.length + 4;
             sbmpHeader->attributes[0] = sbmpAttr;
 
+            break;
+
+        case ACK:
+            /*
+             * Fill in the SBMP Attribute struct
+             */   
+
+            sbmpAttr.type = ATTR_MSG;
+            strcpy(sbmpAttr.payload.message, msg);
+            sbmpAttr.length = strlen(sbmpAttr.payload.message) + 4;
+
+            /*
+             * Fill in the SBMP Header struct
+             */
+
+            sbmpHeader = new SBMPHeaderT();
+            sbmpHeader->version = 1;
+            sbmpHeader->type = (int)ACK;
+            sbmpHeader->length = sbmpAttr.length + 4;
+            sbmpHeader->attributes[0] = sbmpAttr;
+
+            break;
+
+        case NACK:
+            break;
+
+        case ONLINE_INFO:
+            break;
+
+        case OFFLINE_INFO:
             break;
 
         default:

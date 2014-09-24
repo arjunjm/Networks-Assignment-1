@@ -4,6 +4,7 @@
 
 #include "server.h"
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -124,6 +125,16 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
                 {
                     cout << "The user has already connected\n";
                 }
+
+                /*
+                 * Send ACK with currently online user information
+                 */
+                std::string userInfo = getUserInfo();
+                SBMPHeaderT *sbmpHeader = createMessagePacket(ACK, NULL, userInfo.c_str());
+                if (sendData(sockFD, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
+                {
+                    perror("Error while sending ACK");
+                }
             }
             break;
 
@@ -195,6 +206,7 @@ int Server::acceptConnection()
                        }
                        inet_ntop(clientAddr.ss_family, get_in_addr((struct sockaddr *)&clientAddr), ipAddr, sizeof ipAddr);
 
+
                    }
 
                }
@@ -255,6 +267,27 @@ int Server::acceptConnection()
        }
     }
     return 0;
+}
+
+std::string Server::getUserInfo()
+{
+    int count = fdUserMap.size();
+
+    std::stringstream countStr;
+    countStr << count;
+    string clientCountStr = countStr.str(); 
+
+    std::string userInfo;
+    userInfo.append(clientCountStr);
+    
+    std::map<int, string>::iterator it;
+    
+    for (it = fdUserMap.begin(); it != fdUserMap.end(); it++)
+    {
+        userInfo.append(" ");
+        userInfo.append(it->second);
+    }
+    return userInfo;
 }
 
 int main()

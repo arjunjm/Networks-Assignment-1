@@ -94,6 +94,12 @@ int Client::recvData()
         case JOIN:
             break;
 
+        case ACK:
+            {
+                string msg(recvHeader->attributes[0].payload.message);
+                cout << endl << "ACK received: " << msg << endl;
+            }
+
     }
     return numBytes;
 }
@@ -143,7 +149,7 @@ int main(int argc, char *argv[])
          */
         SBMPHeaderT * sbmpHeader = createMessagePacket(JOIN, c->getUserName(), NULL);
         c->sendData(sbmpHeader, sizeof(SBMPHeader));
-
+        c->recvData();
     }
 
     int clientFd = c->getSocketFd();
