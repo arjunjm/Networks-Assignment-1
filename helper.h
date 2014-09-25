@@ -20,7 +20,7 @@ typedef enum UserStatus
     IDLE
 } UserStatusT;
 
-typedef enum AttributeType : unsigned short
+typedef enum AttributeType
 {
    ATTR_REASON,
    ATTR_USER,
