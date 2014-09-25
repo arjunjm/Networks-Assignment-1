@@ -178,12 +178,47 @@ SBMPHeaderT* createMessagePacket(SBMPMessageTypeT msgType, const char *userName,
             break;
 
         case NACK:
-            break;
+            /*
+             * Fill in the SBMP Attribute struct
+             */   
 
-        case ONLINE_INFO:
+            sbmpAttr.type = ATTR_REASON;
+            strcpy(sbmpAttr.payload.message, msg);
+            sbmpAttr.length = strlen(sbmpAttr.payload.message) + 4;
+
+            /*
+             * Fill in the SBMP Header struct
+             */
+
+            sbmpHeader = new SBMPHeaderT();
+            sbmpHeader->version = 1;
+            sbmpHeader->type = (int)NACK;
+            sbmpHeader->length = sbmpAttr.length + 4;
+            sbmpHeader->attributes[0] = sbmpAttr;
+
+
             break;
 
         case OFFLINE_INFO:
+        case ONLINE_INFO:
+            /*
+             * Fill in the SBMP Attribute struct
+             */   
+
+            sbmpAttr.type = ATTR_MSG;
+            strcpy(sbmpAttr.payload.message, msg);
+            sbmpAttr.length = strlen(sbmpAttr.payload.message) + 4;
+
+            /*
+             * Fill in the SBMP Header struct
+             */
+
+            sbmpHeader = new SBMPHeaderT();
+            sbmpHeader->version = 1;
+            sbmpHeader->type = (int)msgType;
+            sbmpHeader->length = sbmpAttr.length + 4;
+            sbmpHeader->attributes[0] = sbmpAttr;
+
             break;
 
         default:

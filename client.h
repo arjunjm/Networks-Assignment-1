@@ -21,11 +21,13 @@ class Client
         int sockFd;
         char userName[15];
         char hostName[15];
+        char serverPort[15];
         struct addrinfo hints;
         bool isConnected;
 
+
     public:
-        Client(char *userName, char *hostName);
+        Client(char *userName, char *hostName, char *serverPort);
         int connectToHost();
         int sendData(void * buf, size_t len, int flags = 0);
         int recvData();

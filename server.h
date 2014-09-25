@@ -28,11 +28,14 @@ class Server
         struct addrinfo hints;
         int sockFd;
         int newConnFd;
+        char serverIP[20];
+        char portNum[10];
+        int maxConnections;
         std::map<int, string> fdUserMap;
         std::map<string, UserStatusT> userStatusMap;
 
     public:
-        Server();
+        Server(char *serverIP, char *portNum, int maxConns);
         int createSocketAndBind();
         int listenForConnections();
         int acceptConnection();

@@ -2,11 +2,12 @@
 #include <iostream>
 using namespace std;
 
-Client::Client(char *usrName, char *hName)
+Client::Client(char *usrName, char *hName, char *servPort)
 {
     isConnected = false;
     strcpy(this->userName, usrName);
-    strcpy(this->hostName, hName); 
+    strcpy(this->hostName, hName);
+    strcpy(this->serverPort, servPort);
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -16,7 +17,7 @@ int Client::connectToHost()
 {
     struct addrinfo *serverInfo;
     char s[INET6_ADDRSTRLEN];
-    int rVal = getaddrinfo(this->hostName, PORT, &this->hints, &serverInfo);
+    int rVal = getaddrinfo(this->hostName, this->serverPort, &this->hints, &serverInfo);
     if (rVal != 0)
     {
         // Non-zero return value indicates an error
@@ -54,7 +55,7 @@ int Client::connectToHost()
     }
 
     inet_ntop(temp->ai_family, get_in_addr((struct sockaddr*)temp->ai_addr), s, sizeof s);
-    printf("client: Connecting to %s\n", s);
+    printf("Establishing connecting with the server at %s\n", s);
     isConnected = true;
 
     freeaddrinfo(serverInfo);
@@ -97,9 +98,53 @@ int Client::recvData()
         case ACK:
             {
                 string msg(recvHeader->attributes[0].payload.message);
-                cout << endl << "ACK received: " << msg << endl;
-            }
+                char *ackMsg = new char[msg.size() + 1];
+                std::copy(msg.begin(), msg.end(), ackMsg);
 
+                char * p = strtok(ackMsg, " ");
+                int n = 1; 
+                printf ("\nCURRENTLY ONLINE USERS\n");
+                printf ("======================\n");
+                while (p)
+                {
+                    if (n == 1)
+                    {
+                        int clientCount = atoi(p);
+                        if (clientCount == 1)
+                        {
+                            printf ("No other user currently online\n\n");
+                            break;
+                        }
+                        else
+                        {
+                            printf ("%d other user(s) currently online\n\n", clientCount - 1);
+                        }
+                    }
+                    else
+                    {
+
+                        p = strtok(NULL, " "); 
+                        if (p != NULL)
+                        {
+                            if (strcmp(p, this->getUserName()) != 0)
+                                printf ("%s\n", p);
+                        }
+                    }
+                    n++;
+                }
+                
+            }
+            cout << endl << endl;
+            break;
+
+        case NACK:
+        case OFFLINE_INFO:
+        case ONLINE_INFO:
+            {
+                string msg(recvHeader->attributes[0].payload.message);
+                cout << endl << msg << endl;
+            }
+            break;
     }
     return numBytes;
 }
@@ -128,12 +173,12 @@ char * Client::getUserName()
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
-        fprintf(stderr, "Usage: client <username> <hostname>\n");
+        fprintf(stderr, "Usage: client <username> <server IP> <server PORT>\n");
         exit(1);
     }
-    Client *c = new Client(argv[1], argv[2]);
+    Client *c = new Client(argv[1], argv[2], argv[3]);
 
     int retVal = c->connectToHost();
     if (retVal < 0)
@@ -147,6 +192,7 @@ int main(int argc, char *argv[])
         /*
          * Send JOIN message to the server
          */
+        cout << "Connection successful..\n";
         SBMPHeaderT * sbmpHeader = createMessagePacket(JOIN, c->getUserName(), NULL);
         c->sendData(sbmpHeader, sizeof(SBMPHeader));
         c->recvData();

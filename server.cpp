@@ -8,12 +8,16 @@
 
 using namespace std;
 
-Server::Server()
+Server::Server(char *servIP, char *portNum, int maxConns)
 {
+    strcpy(this->serverIP, servIP);
+    strcpy(this->portNum, portNum);
+    this->maxConnections = maxConns;
+
     memset(&this->hints, 0, sizeof hints);
     this->hints.ai_family = AF_UNSPEC;
     this->hints.ai_socktype = SOCK_STREAM;
-    this->hints.ai_flags = AI_PASSIVE; // use this machine's IP
+    this->hints.ai_flags = 0; 
 }
 
 int Server::createSocketAndBind()
@@ -21,7 +25,7 @@ int Server::createSocketAndBind()
     struct addrinfo *serverInfo, *temp;
     int yes = 1;
     int rv;
-    if ((rv = getaddrinfo(NULL, PORT, &this->hints, &serverInfo)) != 0)
+    if ((rv = getaddrinfo(this->serverIP, this->portNum, &this->hints, &serverInfo)) != 0)
     {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
@@ -72,7 +76,7 @@ int Server::createSocketAndBind()
 
 int Server::listenForConnections()
 {
-    if(listen(sockFd, BACKLOG) == -1)
+    if(listen(sockFd, maxConnections) == -1)
     {
         perror("Error while listening");
         exit(1);
@@ -114,6 +118,18 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
     {
         case JOIN:
             {
+                if (userStatusMap.size() >= maxConnections)
+                {
+                    std::string connFailReason("Maximum number of connections reached");
+                    cout << connFailReason << endl;
+                    SBMPHeaderT *sbmpHeader = createMessagePacket(NACK, NULL, connFailReason.c_str());
+                    if (sendData(sockFD, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
+                    {
+                        perror("Error while sending NACK");
+                    }
+                    return 0;
+                }
+
                 string userName(recvHeader->attributes[0].payload.username);
                 if (userStatusMap.find(userName) == userStatusMap.end())
                 {
@@ -123,7 +139,14 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
                 }
                 else
                 {
-                    cout << "The user has already connected\n";
+                    std::string connFailReason("Username already in use");
+                    cout <<  "The user has already connected\n";
+                    SBMPHeaderT *sbmpHeader = createMessagePacket(NACK, NULL, connFailReason.c_str());
+                    if (sendData(sockFD, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
+                    {
+                        perror("Error while sending NACK");
+                    }
+                    return 0;
                 }
 
                 /*
@@ -146,6 +169,12 @@ int Server::recvData(int sockFD, SBMPMessageType &msgType, char *message)
                 strcpy(message, recvHeader->attributes[0].payload.message);
                 cout << "Received message from " << fdUserMap[sockFD] << ": [" << message << "]. Forwarding message to other clients" << endl;
             }
+            break;
+
+        case ACK:
+        case NACK:
+        case ONLINE_INFO:
+        case OFFLINE_INFO:
             break;
 
     }
@@ -226,8 +255,26 @@ int Server::acceptConnection()
                          */
                         if (readBytes == 0)
                         {
+                            if (fdUserMap[i] != "")
+                            {
+                                string leftMsg = fdUserMap[i] + " has left the chat session.\n";
+                                cout << leftMsg;
+                                cout << "Connection closed\n";
+
+                                for (int j = 0; j <= fdMax; j++)
+                                {
+                                    if (FD_ISSET (j, &master))
+                                    {
+                                        if ((j != i) && (j != sockFd))
+                                        {
+                                            SBMPHeaderT *sbmpHeader = createMessagePacket(OFFLINE_INFO, NULL, leftMsg.c_str());
+                                            if (sendData(j, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
+                                                perror("Error while broadcasting message");
+                                        }
+                                    }
+                                }
+                            }
                             // Close the connection
-                            cout << fdUserMap[i] << " has left the chat session. Closing the connection " << endl;
                             FD_CLR(i, &master);
                             userStatusMap.erase(fdUserMap[i]);
                             fdUserMap.erase(i);
@@ -255,6 +302,16 @@ int Server::acceptConnection()
                                        SBMPHeaderT *sbmpHeader = createMessagePacket(FWD, userName, message);
                                        if (sendData(j, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
                                            perror("Error while broadcasting message");
+                                   }
+                                   else if (msgType == JOIN)
+                                   {
+                                       string enterMsg;
+                                       enterMsg.append(userName);
+                                       enterMsg.append(" has entered the chat session");
+                                       SBMPHeaderT *sbmpHeader = createMessagePacket(ONLINE_INFO, NULL, enterMsg.c_str());
+                                       if (sendData(j, sbmpHeader, sizeof(SBMPHeaderT), 0) == -1)
+                                           perror("Error while broadcasting message");
+
                                    }
                                }
                            }
@@ -290,9 +347,15 @@ std::string Server::getUserInfo()
     return userInfo;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    Server *s = new Server();
+    if (argc != 4)
+    {
+       fprintf(stderr, "Usage: server <server IP> <server PORT> <max clients>\n");
+       exit(1);
+    }
+
+    Server *s = new Server(argv[1], argv[2], atoi(argv[3]));
     s->createSocketAndBind();
     s->listenForConnections();
 
